@@ -5,8 +5,6 @@ import gzip
 app = FastAPI()
 
 # Cargar los datos
-
-
 df = pd.read_csv('datasets/dfgames.csv')
 df_reviews = pd.read_csv('datasets/user_reviews.csv')
 # Utiliza gzip para abrir el archivo comprimido y pandas para leer el CSV
@@ -135,5 +133,4 @@ def developer_reviews_analysis(developer: str):
     result = {developer: {"Negative": int(sentiment_counts.get(1, 0)), "Positive": int(sentiment_counts.get(2, 0))}}
 
     return result
-
     
