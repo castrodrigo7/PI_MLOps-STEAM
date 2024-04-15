@@ -1,0 +1,6 @@
+fastapi
+nltk
+numpy
+pandas
+uvicorn
+pyarrow
