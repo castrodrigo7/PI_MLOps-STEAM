@@ -1,34 +1,16 @@
 from fastapi import FastAPI
 import pandas as pd
 
-
 app = FastAPI()
-
-# Cargar los datos
-df = pd.read_parquet('datasets/dfgames.parquet')
-df_reviews = pd.read_parquet('datasets/user_reviews.parquet')
-df_items = pd.read_parquet('datasets/users_item.parquet')
-
-""" # Definir la función para leer el archivo CSV comprimido línea por línea
-def read_gzip_csv(filename):
-    data = []
-    with gzip.open(filename, 'rt', encoding='utf-8') as f:
-        # Leer cada línea del archivo CSV y convertirla en un DataFrame
-        for line in f:
-            # Dividir la línea en columnas usando la coma como delimitador
-            row = line.strip().split(',')
-            data.append(row)
-    # Crear un DataFrame a partir de los datos recopilados
-    df = pd.DataFrame(data[1:], columns=data[0])
-    return df """
-
-""" # Utilizar la función para leer el archivo CSV comprimido
-df_items = read_gzip_csv('datasets/users_item.csv.gz') """
-# df_items = pd.read_csv('datasets/user_item.csv')
-
 
 @app.get("/playtime_genre/{genero}")
 def play_time_genre(genero: str):
+    # Cargar los datos dentro de la función
+    cols_1 = ['id', genero, 'year']
+    df = pd.read_parquet('datasets/dfgames.parquet', columns=cols_1)
+    cols_2 = ['item_id', 'playtime_forever']
+    df_items = pd.read_parquet('datasets/users_item.parquet', columns=cols_2)
+
     # Verifica si el género especificado es una columna en el DataFrame
     if genero not in df.columns:
         return {"error": "El género especificado no existe en los datos"}
