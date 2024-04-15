@@ -5,8 +5,8 @@ import pandas as pd
 app = FastAPI()
 
 # Cargar los datos
-df = pd.read_csv('datasets/dfgames.csv')
-df_reviews = pd.read_csv('datasets/user_reviews.csv')
+df = pd.read_parquet('datasets/dfgames.parquet')
+df_reviews = pd.read_parquet('datasets/user_reviews.parquet')
 df_items = pd.read_parquet('datasets/users_item.parquet')
 
 """ # Definir la función para leer el archivo CSV comprimido línea por línea
