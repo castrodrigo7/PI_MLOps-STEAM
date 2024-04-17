@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from typing import List, Dict, Union
 import pandas as pd
+import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 app = FastAPI()
@@ -153,3 +154,46 @@ async def developer_reviews_analysis_1(desarrolladora: str):
 
     # Devolver conteos en un diccionario
     return {desarrolladora: {'Negative': int(sentiment_counts.get(0, 0)),'Positive': int(sentiment_counts.get(2, 0))}}
+
+ 
+# Cargar los DataFrames desde archivos parquet
+df = pd.read_parquet('datasets/dfgames.parquet')[['app_name', 'id']]
+df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']]
+
+# Unir los dataframes para obtener los nombres de los juegos
+df_items = df_items.merge(df, left_on='item_id', right_on='id')
+
+# Eliminar entradas duplicadas
+df_items = df_items.drop_duplicates(subset=['user_id', 'item_id'])
+
+# Crear una matriz de calificaciones de usuario-ítem
+ratings = df_items.pivot(index='item_id', columns='user_id', values='playtime_forever').fillna(0)
+
+# Calcular la matriz de similitud del coseno
+cosine_sim = cosine_similarity(ratings, ratings)
+
+# Crear un mapa inverso de índices y nombres de juegos
+indices = pd.Series(df.index, index=df['app_name']).drop_duplicates()
+
+@app.get("/recommendation/{item_id}")
+async def recommend(item_id: str):
+
+    # Obtener el índice del juego que coincide con el título
+    idx = indices[item_id]
+
+    # Obtener las puntuaciones de similitud por pares de todos los juegos con ese juego
+    sim_scores = list(enumerate(cosine_sim[idx]))
+
+    # Ordenar los juegos en función de las puntuaciones de similitud
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+
+    # Obtener las puntuaciones de los 5 juegos más similares
+    sim_scores = sim_scores[1:6]
+
+    # Obtener los índices de los juegos
+    game_indices = [i[0] for i in sim_scores]
+
+    # Devolver los 5 juegos más similares
+    recommended_games = df['app_name'].iloc[game_indices].tolist()
+
+    return {"Recommended Games": recommended_games}
