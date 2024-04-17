@@ -59,3 +59,36 @@ async def userdata(user_id: str):
     }
 
     return response
+
+@app.get("/UserForGenre/{genero}")
+async def UserForGenre(genero: str):
+    # Cargar los DataFrames desde archivos parquet
+    df = pd.read_parquet('datasets/dfgames.parquet')[['id', genero, 'year']]
+    df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']]
+
+    # Filtrar los juegos del género dado
+    genre_games = df[df[genero] == 1]
+
+    # Filtrar los items de los juegos del género dado
+    genre_items = df_items[df_items['item_id'].isin(genre_games['id'])]
+
+    # Calcular las horas jugadas por usuario
+    user_playtime = genre_items.groupby('user_id')['playtime_forever'].sum()
+
+    # Encontrar el usuario con más horas jugadas
+    top_user = user_playtime.idxmax()
+
+    # Calcular la acumulación de horas jugadas por año de lanzamiento
+    genre_items['year'] = genre_items['item_id'].map(genre_games.set_index('id')['year'])
+    playtime_by_year = genre_items.groupby('year')['playtime_forever'].sum().reset_index()
+
+    # Crear la lista de horas jugadas por año
+    playtime_list = playtime_by_year.rename(columns={'year': 'Año', 'playtime_forever': 'Horas'}).to_dict('records')
+
+    # Crear el diccionario de respuesta
+    response = {
+        f"Usuario con más horas jugadas para {genero}": top_user,
+        "Horas jugadas": playtime_list
+    }
+
+    return response
