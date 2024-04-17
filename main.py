@@ -33,10 +33,12 @@ def developer(desarrollador: str):
 
 @app.get("/userdata/{user_id}")
 async def userdata(user_id: str):
+
     # Cargar los DataFrames desde archivos parquet
     df = pd.read_parquet('datasets/dfgames.parquet')[['id', 'price']]
     df_reviews = pd.read_parquet('datasets/user_reviews.parquet')[['user_id', 'item_id', 'recommend']]
     df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id']]
+
     # Filtrar las reviews del usuario
     user_reviews = df_reviews[df_reviews['user_id'] == user_id]
 
@@ -62,6 +64,7 @@ async def userdata(user_id: str):
 
 @app.get("/UserForGenre/{genero}")
 async def UserForGenre(genero: str):
+
     # Cargar los DataFrames desde archivos parquet
     df = pd.read_parquet('datasets/dfgames.parquet')[['id', genero, 'year']]
     df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']]
@@ -92,3 +95,39 @@ async def UserForGenre(genero: str):
     }
 
     return response
+
+@app.get("/best_developer_year/{year}")
+async def best_developer_year(year: int):
+    # Cargar los DataFrames desde archivos CSV
+    df = pd.read_parquet('datasets/dfgames.parquet')[['id', 'developer', 'year']]
+    df_reviews = pd.read_parquet('datasets/user_reviews.parquet')[['item_id', 'recommend']]
+
+    # Convertir el año a int
+    df['year'] = df['year'].astype(int)
+
+    # Filtrar los juegos del año dado
+    year_games = df[df['year'] == year].copy()  # Crear una copia explícita del DataFrame
+
+    # Filtrar las reviews de los juegos del año dado que fueron recomendados
+    recommended_reviews = df_reviews[(df_reviews['item_id'].isin(year_games['id'])) & (df_reviews['recommend'] == True)]
+
+    # Calcular la cantidad de recomendaciones por juego
+    game_recommendations = recommended_reviews['item_id'].value_counts()
+
+    # Asignar la cantidad de recomendaciones a cada juego
+    year_games.loc[:, 'recommendations'] = year_games['id'].map(game_recommendations)
+
+    # Calcular la cantidad de recomendaciones por desarrollador
+    developer_recommendations = year_games.groupby('developer')['recommendations'].sum()
+
+    # Verificar si no hay desarrolladores con recomendaciones
+    if developer_recommendations.empty:
+        return "No se encontraron desarrolladores con recomendaciones para ese año."
+
+    # Encontrar el top 3 de desarrolladores
+    top_developers = developer_recommendations.nlargest(3)
+
+    # Crear la lista de desarrolladores
+    developer_list = [{"Puesto " + str(i+1): developer} for i, developer in enumerate(top_developers.index)]
+
+    return developer_list

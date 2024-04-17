@@ -5,3 +5,4 @@ pandas
 uvicorn
 pyarrow
 scikit-learn
+typing_extensions
