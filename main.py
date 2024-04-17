@@ -82,7 +82,7 @@ async def UserForGenre(genero: str):
     top_user = user_playtime.idxmax()
 
     # Calcular la acumulación de horas jugadas por año de lanzamiento
-    genre_items['year'] = genre_items['item_id'].map(genre_games.set_index('id')['year'])
+    genre_items['year'] = genre_items['item_id'].map(genre_games.set_index('id')['year'].to_dict())
     playtime_by_year = genre_items.groupby('year')['playtime_forever'].sum().reset_index()
 
     # Crear la lista de horas jugadas por año
@@ -169,12 +169,6 @@ async def recommend(item_id: str):
     # Cargar los DataFrames desde archivos parquet
     df = pd.read_parquet('datasets/dfgames.parquet')[['app_name', 'id']]
     df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']]
-
-    df['id'] = df['id'].astype('int16')
-    df_items['item_id'] = df_items['item_id'].astype('int16')
-    df_items['playtime_forever'] = df_items['playtime_forever'].astype('int16')
-
-    df['app_name'] = df['app_name'].astype('category')
 
     # Unir los dataframes para obtener los nombres de los juegos
     df_items = df_items.merge(df, left_on='item_id', right_on='id')
