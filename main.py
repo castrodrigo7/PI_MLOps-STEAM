@@ -30,3 +30,32 @@ def developer(desarrollador: str):
         result.append({"Año": int(year), "Cantidad de Items": total_items, "Contenido Free": f"{free_percentage}%"})  # Convertir 'year' a entero estándar de Python
     
     return result
+
+@app.get("/userdata/{user_id}")
+async def userdata(user_id: str):
+    # Cargar los DataFrames desde archivos parquet
+    df = pd.read_parquet('datasets/dfgames.parquet')[['id', 'price']]
+    df_reviews = pd.read_parquet('datasets/user_reviews.parquet')[['user_id', 'item_id', 'recommend']]
+    df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id']]
+    # Filtrar las reviews del usuario
+    user_reviews = df_reviews[df_reviews['user_id'] == user_id]
+
+    # Calcular la cantidad de dinero gastado por el usuario
+    user_items = df_items[df_items['user_id'] == user_id]
+    user_spent = df[df['id'].isin(user_items['item_id'])]['price'].sum()
+
+    # Calcular el porcentaje de recomendación
+    recommend_pct = user_reviews['recommend'].mean() * 100
+
+    # Calcular la cantidad de items
+    item_count = user_items.shape[0]
+
+    # Crear el diccionario de respuesta
+    response = {
+        "Usuario": user_id,
+        "Dinero gastado": f"{user_spent} USD",
+        "% de recomendación": f"{recommend_pct}%",
+        "cantidad de items": item_count
+    }
+
+    return response
