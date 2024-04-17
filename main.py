@@ -165,6 +165,12 @@ async def developer_reviews_analysis(desarrolladora: str):
 df = pd.read_parquet('datasets/dfgames.parquet')[['app_name', 'id']]
 df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']]
 
+df['id'] = df['id'].astype('int16')
+df_items['item_id'] = df_items['item_id'].astype('int16')
+df_items['playtime_forever'] = df_items['playtime_forever'].astype('int16')
+
+df['app_name'] = df['app_name'].astype('category')
+
 # Unir los dataframes para obtener los nombres de los juegos
 df_items = df_items.merge(df, left_on='item_id', right_on='id')
 
