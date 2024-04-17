@@ -3,7 +3,6 @@ from typing import List, Dict, Union
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import csr_matrix
-from sklearn.decomposition import TruncatedSVD
 
 app = FastAPI()
 
@@ -174,6 +173,8 @@ async def recommend(item_id: str):
     # Unir los dataframes para obtener los nombres de los juegos
     df_items = df_items.merge(df, left_on='item_id', right_on='id')
 
+    df_items = df_items.sample(n=10000)
+
     # Eliminar entradas duplicadas
     df_items = df_items.drop_duplicates(subset=['user_id', 'item_id'])
 
@@ -184,14 +185,8 @@ async def recommend(item_id: str):
     ratings = csr_matrix((df_items['playtime_forever'], 
                         (df_items['item_id'].cat.codes, df_items['user_id'].cat.codes)))
 
-    # Crear una instancia de TruncatedSVD
-    svd = TruncatedSVD(n_components=200)  # puedes ajustar el número de componentes
-
-    # Ajustar y transformar los datos
-    reduced_ratings = svd.fit_transform(ratings)
-
     # Calcular la matriz de similitud del coseno con los datos reducidos
-    cosine_sim = cosine_similarity(reduced_ratings, dense_output=False)
+    cosine_sim = cosine_similarity(ratings, dense_output=False)
 
     # Crear un mapa inverso de índices y nombres de juegos
     indices = pd.Series(df.index, index=df['app_name']).drop_duplicates()
@@ -200,7 +195,7 @@ async def recommend(item_id: str):
     idx = indices[int(item_id)]
 
     # Obtener las puntuaciones de similitud por pares de todos los juegos con ese juego
-    sim_scores = list(enumerate(cosine_sim[idx]))
+    sim_scores = list(enumerate(cosine_sim[idx].A[0]))
 
     # Ordenar los juegos en función de las puntuaciones de similitud
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
