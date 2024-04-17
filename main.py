@@ -161,28 +161,28 @@ async def developer_reviews_analysis(desarrolladora: str):
     return {desarrolladora: {'Negative': int(sentiment_counts.get(0, 0)),'Positive': int(sentiment_counts.get(2, 0))}}
 
 
+# Cargar los DataFrames desde archivos parquet
+df = pd.read_parquet('datasets/dfgames.parquet')[['app_name', 'id']]
+df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']]
+
+# Unir los dataframes para obtener los nombres de los juegos
+df_items = df_items.merge(df, left_on='item_id', right_on='id')
+
+# Eliminar entradas duplicadas
+df_items = df_items.drop_duplicates(subset=['user_id', 'item_id'])
+
+# Crear una matriz de calificaciones de usuario-ítem
+df_items['user_id'] = df_items['user_id'].astype('category')
+df_items['item_id'] = df_items['item_id'].astype('category')
+
+ratings = csr_matrix((df_items['playtime_forever'], 
+                    (df_items['item_id'].cat.codes, df_items['user_id'].cat.codes)))
+
+# Calcular la matriz de similitud del coseno
+cosine_sim = cosine_similarity(ratings, dense_output=False)
+
 @app.get("/recommendation/{item_id}")
 async def recommend(item_id: str):
-
-    # Cargar los DataFrames desde archivos parquet
-    df = pd.read_parquet('datasets/dfgames.parquet')[['app_name', 'id']]
-    df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']]
-
-    # Unir los dataframes para obtener los nombres de los juegos
-    df_items = df_items.merge(df, left_on='item_id', right_on='id')
-
-    # Eliminar entradas duplicadas
-    df_items = df_items.drop_duplicates(subset=['user_id', 'item_id'])
-
-    # Crear una matriz de calificaciones de usuario-ítem
-    df_items['user_id'] = df_items['user_id'].astype('category')
-    df_items['item_id'] = df_items['item_id'].astype('category')
-
-    ratings = csr_matrix((df_items['playtime_forever'], 
-                        (df_items['item_id'].cat.codes, df_items['user_id'].cat.codes)))
-
-    # Calcular la matriz de similitud del coseno
-    cosine_sim = cosine_similarity(ratings, dense_output=False)
 
     # Crear un mapa inverso de índices y nombres de juegos
     indices = pd.Series(df.index, index=df['app_name']).drop_duplicates()
