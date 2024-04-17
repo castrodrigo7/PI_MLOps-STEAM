@@ -7,11 +7,7 @@ app = FastAPI()
 
 @app.get("/developer/{desarrollador}")
 def developer(desarrollador: str):
-    """
-    Esta funcion calcula para un desarrolador de juego devuelve la cantidad de items y el porcentaje de contenido gratis por año
-    params:
-    desarrollador:str
-    """
+
     cols_1 = ['developer', 'year', 'price']
     df = pd.read_parquet('datasets/dfgames.parquet', columns=cols_1)
     # Convertir el nombre del desarrollador a minúsculas para manejar de manera consistente las cadenas de texto
@@ -131,3 +127,29 @@ async def best_developer_year(year: int):
     developer_list = [{"Puesto " + str(i+1): developer} for i, developer in enumerate(top_developers.index)]
 
     return developer_list
+
+@app.get("/developer_reviews_analysis/{desarrolladora}")
+async def developer_reviews_analysis_1(desarrolladora: str):
+
+    # Cargar los DataFrames desde archivos parquet una sola vez al inicio
+    df_reviews = pd.read_parquet('datasets/user_reviews.parquet')[['item_id', 'recommend', 'sentiment_analysis']]
+    df_games = pd.read_parquet('datasets/dfgames.parquet')[['id', 'developer']]
+
+    # Convertir todos los nombres de los desarrolladores en letras minúsculas para evitar la duplicación de datos debido a las diferencias de mayúsculas y minúsculas
+    df_games['developer'] = df_games['developer'].str.lower()
+
+    # Convertir el nombre del desarrollador proporcionado en letras minúsculas
+    desarrolladora = desarrolladora.lower()
+
+    # Filtrar por desarrollador y realizar el merge con las reseñas
+    developer_data = pd.merge(df_reviews,df_games[df_games['developer'] == desarrolladora],left_on='item_id',right_on='id',how='inner')
+
+    # Verificar si se encuentra los juegos del desarrollador en el dataset
+    if developer_data.empty:
+        return 'No se encontraron reviews para ese desarrollador'
+
+    # Contar los sentimientos de análisis de comentarios
+    sentiment_counts = developer_data['sentiment_analysis'].value_counts()
+
+    # Devolver conteos en un diccionario
+    return {desarrolladora: {'Negative': int(sentiment_counts.get(0, 0)),'Positive': int(sentiment_counts.get(2, 0))}}
