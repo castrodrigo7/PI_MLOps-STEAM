@@ -167,13 +167,11 @@ async def developer_reviews_analysis(desarrolladora: str):
 async def recommend(item_id: str):
 
     # Cargar los DataFrames desde archivos parquet
-    df = pd.read_parquet('datasets/dfgames.parquet')[['app_name', 'id']]
-    df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']]
+    df = pd.read_parquet('datasets/dfgames.parquet')[['app_name', 'id']].sample(n=20000)
+    df_items = pd.read_parquet('datasets/users_item.parquet')[['user_id', 'item_id', 'playtime_forever']].sample(n=20000)
 
     # Unir los dataframes para obtener los nombres de los juegos
     df_items = df_items.merge(df, left_on='item_id', right_on='id')
-
-    df_items = df_items.sample(n=10000)
 
     # Eliminar entradas duplicadas
     df_items = df_items.drop_duplicates(subset=['user_id', 'item_id'])
@@ -195,7 +193,7 @@ async def recommend(item_id: str):
     idx = indices[int(item_id)]
 
     # Obtener las puntuaciones de similitud por pares de todos los juegos con ese juego
-    sim_scores = list(enumerate(cosine_sim[idx].A[0]))
+    sim_scores = list(enumerate(cosine_sim[idx].toarray()[0]))
 
     # Ordenar los juegos en función de las puntuaciones de similitud
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
